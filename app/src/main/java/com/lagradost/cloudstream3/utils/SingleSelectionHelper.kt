@@ -2,9 +2,13 @@ package com.lagradost.cloudstream3.utils
 
 import android.app.Activity
 import android.app.Dialog
+import android.content.Context
+import android.content.DialogInterface
 import android.text.Spanned
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
@@ -25,6 +29,8 @@ import com.lagradost.cloudstream3.ui.settings.Globals.EMULATOR
 import com.lagradost.cloudstream3.ui.settings.Globals.PHONE
 import com.lagradost.cloudstream3.ui.settings.Globals.TV
 import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
+import com.lagradost.cloudstream3.utils.AppContextUtils.prepareForTvRemote
+import com.lagradost.cloudstream3.utils.AppContextUtils.setDefaultFocus
 import com.lagradost.cloudstream3.utils.ImageLoader.loadImage
 import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.popupMenuNoIconsAndNoStringRes
@@ -180,6 +186,15 @@ object SingleSelectionHelper {
                 dialog.dismissSafe(this)
             }
         }
+
+        if (isLayout(TV or EMULATOR)) {
+            listView.isFocusable = true
+            listView.isFocusableInTouchMode = true
+            listView.post {
+                if (listView.isAttachedToWindow) listView.requestFocus()
+            }
+        }
+        dialog.prepareForTvRemote()
     }
 
     private fun Activity?.showInputDialog(
@@ -221,6 +236,20 @@ object SingleSelectionHelper {
             dismissCallback.invoke()
         }
 
+        if (isLayout(TV or EMULATOR)) {
+            inputView.showSoftInputOnFocus = false
+            inputView.isFocusableInTouchMode = true
+            inputView.setOnKeyListener { view, keyCode, event ->
+                if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER && keyCode != KeyEvent.KEYCODE_ENTER) {
+                    return@setOnKeyListener false
+                }
+                val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+                true
+            }
+        }
+        dialog.prepareForTvRemote()
     }
 
     fun Activity?.showMultiDialog(
@@ -299,6 +328,12 @@ object SingleSelectionHelper {
     ) {
         if (this == null) return
 
+        // Bottom sheets sit under the overscan and do not take D-pad focus on Fire TV.
+        if (isLayout(TV)) {
+            showDialog(items, selectedIndex, name, showApply, dismissCallback, callback)
+            return
+        }
+
         val binding: BottomSelectionDialogBinding = BottomSelectionDialogBinding.inflate(
             LayoutInflater.from(this)
         )
@@ -326,7 +361,30 @@ object SingleSelectionHelper {
         name: String,
         dismissCallback: () -> Unit,
         callback: (Int) -> Unit,
-    ): BottomSheetDialog {
+    ): Dialog {
+        if (isLayout(TV)) {
+            val binding: BottomSelectionDialogBinding = BottomSelectionDialogBinding.inflate(
+                LayoutInflater.from(this)
+            )
+            val dialog = AlertDialog.Builder(this, R.style.AlertDialogCustom)
+                .setView(binding.root)
+                .create()
+            dialog.show()
+            showDialog(
+                binding,
+                dialog,
+                items,
+                emptyList(),
+                name,
+                showApply = false,
+                isMultiSelect = false,
+                callback = { if (it.isNotEmpty()) callback.invoke(it.first()) },
+                dismissCallback = dismissCallback,
+                itemLayout = R.layout.sort_bottom_single_choice_no_checkmark
+            )
+            return dialog
+        }
+
         val builder =
             BottomSheetDialog(this)
 
@@ -359,18 +417,21 @@ object SingleSelectionHelper {
         dismissCallback: () -> Unit,
         callback: (String) -> Unit,
     ) {
-        val builder = BottomSheetDialog(this)
-
         val binding: BottomInputDialogBinding = BottomInputDialogBinding.inflate(
             LayoutInflater.from(this)
         )
+        val dialog: Dialog = if (isLayout(TV)) {
+            AlertDialog.Builder(this, R.style.AlertDialogCustom)
+                .setView(binding.root)
+                .create()
+        } else {
+            BottomSheetDialog(this).apply { setContentView(binding.root) }
+        }
 
-        builder.setContentView(binding.root)
-
-        builder.show()
+        dialog.show()
         showInputDialog(
             binding,
-            builder,
+            dialog,
             value,
             name,
             textInputType,  // type is a uri
@@ -384,6 +445,18 @@ object SingleSelectionHelper {
         text: Spanned,
         dismissCallback: () -> Unit
     ) {
+        if (isLayout(TV)) {
+            val dialog = AlertDialog.Builder(this, R.style.AlertDialogCustom)
+                .setTitle(title)
+                .setMessage(text)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+            dialog.setOnDismissListener { dismissCallback.invoke() }
+            dialog.show()
+            dialog.setDefaultFocus(DialogInterface.BUTTON_POSITIVE)
+            return
+        }
+
         val binding = BottomTextDialogBinding.inflate(layoutInflater)
         val dialog = BottomSheetDialog(this)
 

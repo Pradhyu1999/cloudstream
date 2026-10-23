@@ -19,6 +19,8 @@ import com.lagradost.cloudstream3.ui.player.CSPlayerEvent
 import com.lagradost.cloudstream3.ui.player.CSPlayerLoading
 import com.lagradost.cloudstream3.ui.player.PlayerEventSource
 import com.lagradost.cloudstream3.ui.player.SubtitleData
+import com.lagradost.cloudstream3.ui.settings.Globals.TV
+import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
 import com.lagradost.cloudstream3.utils.BackPressedCallbackHelper.attachBackPressedCallback
 import com.lagradost.cloudstream3.utils.BackPressedCallbackHelper.detachBackPressedCallback
 import com.lagradost.cloudstream3.utils.UIHelper.fixSystemBarsPadding
@@ -148,7 +150,7 @@ class ResultTrailerPlayer : ResultFragmentPhone() {
         fixPlayerSize()
         // Apply autorotation when fullscreen (lockRotation = true).
         // PlayerView already set isVerticalOrientation before this callback fires.
-        if (lockRotation) {
+        if (lockRotation && !isLayout(TV)) {
             activity?.requestedOrientation = playerHostView?.dynamicOrientation() ?: return
         }
     }

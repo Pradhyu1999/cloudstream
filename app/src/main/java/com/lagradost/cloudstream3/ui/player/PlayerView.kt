@@ -442,7 +442,10 @@ class PlayerView @JvmOverloads constructor(
     fun exitFullscreen() {
         val activity = context as? Activity
         gestureHelper.resetZoomToDefault()
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
+        // Fire TV has no orientation sensor. Requesting one restarts playback.
+        if (!isLayout(TV)) {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
+        }
         // Simply resets brightness and notch settings that might have been overridden.
         val lp = activity?.window?.attributes
         lp?.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE

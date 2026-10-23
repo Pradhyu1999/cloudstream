@@ -7,7 +7,9 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
 import android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
 import android.view.animation.AlphaAnimation
@@ -144,7 +146,28 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
                 setOnFocusChangeListener { _, _ ->
                     binding.searchBar.setExpanded(true)
                 }
+                if (!isLayout(PHONE)) downToCurrentLibraryPage()
             }
+
+        if (!isLayout(PHONE)) {
+            // ViewPager2 is focusable by default and swallows the D-pad without a highlight.
+            binding.viewpager.isFocusable = false
+            binding.viewpager.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+            binding.viewpager.post {
+                (binding.viewpager.getChildAt(0) as? RecyclerView)?.apply {
+                    isFocusable = false
+                    descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+                }
+            }
+            listOf(
+                binding.libraryTabLayout,
+                binding.mainSearch,
+                binding.libraryRandomButtonTv,
+                binding.providerSelector,
+                binding.librarySort,
+                binding.listSelector,
+            ).forEach { it.downToCurrentLibraryPage() }
+        }
 
         val searchCallback = Runnable {
             val newText = binding.mainSearch.query.toString()
@@ -435,7 +458,14 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
                         ) { tab, position ->
                             tab.text = pages.getOrNull(position)?.title?.asStringNull(context)
                             tab.view.tag = "tv_no_focus_tag"
-                            tab.view.nextFocusDownId = R.id.search_result_root
+                            // Every page inflates posters with the same id. Pointing down at
+                            // that id always lands on the first page ("watching") once it is
+                            // hidden, so other categories cannot be opened from the remote.
+                            if (!isLayout(PHONE)) {
+                                tab.view.downToCurrentLibraryPage()
+                            } else {
+                                tab.view.nextFocusDownId = R.id.search_result_root
+                            }
 
                             tab.view.setOnClickListener {
                                 val currentItem = binding.viewpager.currentItem
@@ -546,6 +576,36 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
             }
         }
 
+    }
+
+    /**
+     * D-pad down from the library chrome focuses the poster grid of the page
+     * that is actually selected, instead of the first ViewPager child.
+     */
+    private fun View.downToCurrentLibraryPage() {
+        nextFocusDownId = View.NO_ID
+        setOnKeyListener { _, keyCode, event ->
+            if (isLayout(PHONE)) return@setOnKeyListener false
+            if (event.action != KeyEvent.ACTION_DOWN || keyCode != KeyEvent.KEYCODE_DPAD_DOWN) {
+                return@setOnKeyListener false
+            }
+            focusCurrentLibraryPage()
+        }
+    }
+
+    private fun focusCurrentLibraryPage(): Boolean {
+        val pageBinding = binding ?: return false
+        val position = libraryViewModel.currentPage.value ?: pageBinding.viewpager.currentItem
+        val current = pageBinding.viewpager.allViews
+            .filterIsInstance<AutofitRecyclerView>()
+            .firstOrNull { it.tag == position }
+            ?: return false
+        val poster = current.findViewById<View>(R.id.search_result_root)
+        poster?.isFocusableInTouchMode = true
+        if (poster?.requestFocus() == true) return true
+        current.isFocusable = true
+        current.isFocusableInTouchMode = true
+        return current.requestFocus()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

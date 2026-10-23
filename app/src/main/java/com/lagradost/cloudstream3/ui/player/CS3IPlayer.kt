@@ -93,6 +93,7 @@ import com.lagradost.cloudstream3.ui.player.live.LiveHelper
 import com.lagradost.cloudstream3.ui.player.live.PREFERRED_LIVE_OFFSET
 import com.lagradost.cloudstream3.ui.settings.Globals.EMULATOR
 import com.lagradost.cloudstream3.ui.settings.Globals.PHONE
+import com.lagradost.cloudstream3.ui.settings.Globals.TV
 import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
 import com.lagradost.cloudstream3.ui.subtitles.SaveCaptionStyle
 import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment.Companion.applyStyle
@@ -1158,6 +1159,14 @@ class CS3IPlayer : IPlayer {
                                     .build()
                             }
                         }
+                    }
+                    if (isLayout(TV)) {
+                        // Stick 4K's first codec for HEVC, Dolby Vision or E-AC3 often
+                        // fails to start. Fallback tries the next decoder (the HDR10
+                        // base layer, or a working audio decoder). Playback is unchanged
+                        // when the first decoder initializes, including on phones where
+                        // this stays off unless software decoding is already enabled.
+                        factory.setEnableDecoderFallback(true)
                     }
 
                     val style = CustomDecoder.style

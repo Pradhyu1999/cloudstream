@@ -52,6 +52,7 @@ import com.lagradost.cloudstream3.ui.settings.Globals.TV
 import com.lagradost.cloudstream3.ui.settings.Globals.updateTv
 import com.lagradost.cloudstream3.ui.settings.extensions.PluginAdapter
 import com.lagradost.cloudstream3.utils.AppContextUtils.isRtl
+import com.lagradost.cloudstream3.utils.AppContextUtils.prepareForTvRemote
 import com.lagradost.cloudstream3.utils.BiometricAuthenticator.isAuthEnabled
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.cloudstream3.utils.Event
@@ -249,6 +250,7 @@ object CommonActivity {
 
         componentActivity.updateLocale()
         componentActivity.updateTv()
+        componentActivity.prepareForTvRemote()
         AccountManager.initMainAPI()
         NewPipe.init(DownloaderTestImpl.getInstance())
 
