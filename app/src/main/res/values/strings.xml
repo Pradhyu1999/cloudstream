@@ -814,4 +814,31 @@
     </plurals>
     <string name="player_is_live">Live</string>
     <string name="installed_plugins">Installed plugins</string>
+    <string name="server_ratings_title">Servers</string>
+    <string name="server_ratings_hint">Ratings and stream quality measured on this device</string>
+    <string name="server_no_data">No data yet</string>
+    <string name="server_kind_provider">Provider</string>
+    <string name="server_kind_extractor">Stream host</string>
+    <string name="server_sort_rating">Rating</string>
+    <string name="server_sort_quality">Quality</string>
+    <string name="server_sort_name">Name</string>
+    <string name="server_sort_latency">Speed</string>
+    <string name="server_filter_all">All</string>
+    <string name="server_filter_rated">Rated</string>
+    <string name="server_filter_no_data">No data</string>
+    <string name="server_filter_providers">Providers</string>
+    <string name="server_filter_extractors">Hosts</string>
+    <string name="server_stat_success">Success %1$d%%</string>
+    <string name="server_stat_fail">Fail %1$d%%</string>
+    <string name="server_stat_timeout">Timeout %1$d%%</string>
+    <string name="server_stat_latency">Start %1$s</string>
+    <string name="server_stat_playback_errors">Playback errors %1$d%%</string>
+    <string name="server_stat_rebuffers">Rebuffers %1$d</string>
+    <string name="server_play_to_rate">Play something from this server to rate it</string>
+    <string name="server_empty">No servers installed yet. Add an extension to see providers here.</string>
+    <string name="server_home_source_set">Home source set to %1$s</string>
+    <string name="server_rating_value">%1$d, %2$s stars</string>
+    <string name="server_card_description">%1$s, %2$s, %3$s</string>
+    <string name="server_quality_unknown">Quality unknown</string>
+    <string name="server_open_ratings">Open server ratings</string>
 </resources>

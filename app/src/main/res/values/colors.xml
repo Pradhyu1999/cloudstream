@@ -56,6 +56,11 @@
     <!--<color name="videoCache">#663D50FA</color>--> <!--66B5B5B5-->
 
     <color name="iconColor">#9ba0a6</color>
+    <color name="serverRatingGood">#3DDC84</color>
+    <color name="serverRatingOk">#E6B325</color>
+    <color name="serverRatingPoor">#F05353</color>
+    <color name="serverQualityBadge">#F5C518</color>
+    <color name="serverQualityText">#121212</color>
 
     <!-- <color name="usedStorageColor">?attr/white</color>#fff-->
     <!-- <color name="freeStorageColor">?attr/grayTextColor</color> #676767-->
