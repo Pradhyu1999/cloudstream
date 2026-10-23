@@ -24,6 +24,7 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.preference.PreferenceManager
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.lagradost.cloudstream3.plugins.PluginManager
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getActivity
@@ -637,6 +638,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
 
     private var bottomSheetDialog: BottomSheetDialog? = null
     private var homeMasterAdapter: HomeParentItemAdapterPreview? = null
+    private var serverStripAdapter: ServerStripAdapter? = null
 
     var lastSavedHomepage: String? = null
 
@@ -696,8 +698,30 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
             homeMasterAdapter = HomeParentItemAdapterPreview(
                 homeViewModel, accountViewModel
             )
+            serverStripAdapter = ServerStripAdapter(
+                providerNames = {
+                    context?.filterProviderByPreferredMedia(hasHomePageIsRequired = false)
+                        ?.map { it.name }
+                        .orEmpty()
+                },
+                onOpenAll = {
+                    activity?.navigate(R.id.navigation_server_ratings)
+                },
+                onProviderSelected = { name ->
+                    val api = getApiFromNameNull(name) ?: return@ServerStripAdapter
+                    homeViewModel.loadAndCancel(api.name, forceReload = true, fromUI = true)
+                    showToast(getString(R.string.server_home_source_set, api.name), Toast.LENGTH_SHORT)
+                },
+            )
             homeMasterRecycler.setRecycledViewPool(ParentItemAdapter.sharedPool)
-            homeMasterRecycler.adapter = homeMasterAdapter
+            homeMasterRecycler.adapter = ConcatAdapter(serverStripAdapter, homeMasterAdapter)
+            // D-pad down from the home header enters the server row before the rest of the page.
+            val serverRowId = R.id.server_section_title
+            homeChangeApi.nextFocusDownId = serverRowId
+            homePreviewSearchButton.nextFocusDownId = serverRowId
+            homePreviewReloadProvider.nextFocusDownId = serverRowId
+            homePreviewSettingsButton.nextFocusDownId = serverRowId
+            homeRandomButtonTv.nextFocusDownId = serverRowId
 
             homeApiFab.isVisible = isLayout(PHONE)
 
@@ -842,11 +866,12 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                 when (data) {
                     is Resource.Success -> {
                         val d = data.value
-                        (homeMasterRecycler.adapter as? ParentItemAdapter)?.submitList(d.values.map {
+                        homeMasterAdapter?.submitList(d.values.map {
                             it.copy(
                                 list = it.list.copy(list = it.list.list.toMutableList())
                             )
                         })
+                        serverStripAdapter?.refresh()
 
                         saveHomepageToTV(d)
 
@@ -913,7 +938,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                             activity.navigate(R.id.navigation_downloads)
                         }
 
-                        (homeMasterRecycler.adapter as? ParentItemAdapter)?.apply {
+                        homeMasterAdapter?.apply {
                             submitList(null)
                             clearState()
                         }
@@ -924,7 +949,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                         homeLoading.isVisible = true
                         homeLoadingError.isVisible = false
                         homeMasterRecycler.isInvisible = true
-                        (homeMasterRecycler.adapter as? ParentItemAdapter)?.apply {
+                        homeMasterAdapter?.apply {
                             submitList(null)
                             clearState()
                         }
@@ -977,6 +1002,11 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                 break
             }
         }*/
+    }
+
+    override fun onResume() {
+        super.onResume()
+        serverStripAdapter?.refresh()
     }
 
     private fun updateTvRailFocus() {

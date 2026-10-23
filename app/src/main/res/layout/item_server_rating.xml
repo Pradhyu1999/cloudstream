@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/server_card"
+    android:layout_width="220dp"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="@drawable/outline_drawable"
+    app:cardBackgroundColor="?attr/primaryGrayBackground"
+    app:cardCornerRadius="@dimen/rounded_image_radius">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="108dp"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/server_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/google_sans"
+                android:maxLines="1"
+                android:textColor="?attr/textColor"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="Example" />
+
+            <TextView
+                android:id="@+id/server_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_server_quality"
+                android:fontFamily="@font/google_sans"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/serverQualityText"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="1080p" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/server_kind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/google_sans"
+            android:textColor="?attr/grayTextColor"
+            android:textSize="12sp"
+            tools:text="Provider" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/server_stars"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/google_sans"
+                android:textColor="?attr/textColor"
+                android:textSize="14sp"
+                tools:text="★★★★☆" />
+
+            <TextView
+                android:id="@+id/server_score"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_server_score"
+                android:fontFamily="@font/google_sans"
+                android:paddingStart="6dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="1dp"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="86" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/server_meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/google_sans"
+            android:maxLines="3"
+            android:textColor="?attr/grayTextColor"
+            android:textSize="12sp"
+            tools:text="Success 92% · Start 1.2 s · HEVC · 4.5 Mbps" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/server_ratings_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/primaryBlackBackground"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp">
+
+        <ImageButton
+            android:id="@+id/server_ratings_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/go_back_img_des"
+            android:focusable="true"
+            android:foreground="@drawable/outline_drawable"
+            android:nextFocusLeft="@id/nav_rail_view"
+            android:nextFocusDown="@id/server_sort_rating"
+            android:src="@drawable/ic_baseline_arrow_back_24"
+            app:tint="?attr/textColor" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/server_ratings_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/google_sans"
+                android:text="@string/server_ratings_title"
+                android:textColor="?attr/textColor"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/server_ratings_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/server_ratings_hint"
+                android:textColor="?attr/grayTextColor"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/server_sort_group"
+            style="@style/ChipParent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_sort_rating"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_filter_all"
+                android:tag=""
+                android:text="@string/server_sort_rating" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_sort_quality"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_filter_all"
+                android:tag=""
+                android:text="@string/server_sort_quality" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_sort_name"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_filter_all"
+                android:tag=""
+                android:text="@string/server_sort_name" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_sort_latency"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_filter_all"
+                android:tag=""
+                android:text="@string/server_sort_latency" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/server_filter_group"
+            style="@style/ChipParent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_filter_all"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusUp="@id/server_sort_rating"
+                android:nextFocusDown="@id/server_ratings_list"
+                android:tag=""
+                android:text="@string/server_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_filter_rated"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_ratings_list"
+                android:tag=""
+                android:text="@string/server_filter_rated" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_filter_no_data"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_ratings_list"
+                android:tag=""
+                android:text="@string/server_filter_no_data" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_filter_providers"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_ratings_list"
+                android:tag=""
+                android:text="@string/server_filter_providers" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/server_filter_extractors"
+                style="@style/ChipFilled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusDown="@id/server_ratings_list"
+                android:tag=""
+                android:text="@string/server_filter_extractors" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
+    <TextView
+        android:id="@+id/server_ratings_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:text="@string/server_empty"
+        android:textColor="?attr/textColor"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/server_ratings_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:descendantFocusability="afterDescendants"
+        android:nextFocusUp="@id/server_filter_all"
+        android:padding="8dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/item_server_rating" />
+</LinearLayout>

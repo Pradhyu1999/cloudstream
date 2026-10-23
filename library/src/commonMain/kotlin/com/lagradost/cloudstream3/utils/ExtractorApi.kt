@@ -343,6 +343,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
@@ -929,6 +930,100 @@ suspend fun loadExtractor(
 
 
 /**
+ * One extractor attempt, used by the app to rate hosts from real loads.
+ * Link URLs are not included.
+ */
+data class ExtractorLoadMeasurement(
+    val name: String,
+    val producedLinks: Int,
+    val failed: Boolean,
+    val timedOut: Boolean,
+    val latencyMs: Long,
+    val qualities: List<Int>,
+    val linkNames: List<String>,
+)
+
+/**
+ * Optional app hook. Null unless the application registers a listener.
+ * Implementations must not change extractor behavior.
+ */
+var extractorLoadListener: ((ExtractorLoadMeasurement) -> Unit)? = null
+
+private fun Throwable.looksLikeTimeout(): Boolean {
+    var current: Throwable? = this
+    while (current != null) {
+        val name = current::class.simpleName.orEmpty()
+        if (name.contains("Timeout", ignoreCase = true)) return true
+        current = current.cause
+    }
+    return false
+}
+
+private fun dispatchExtractorMeasurement(measurement: ExtractorLoadMeasurement) {
+    val listener = extractorLoadListener ?: return
+    try {
+        listener(measurement)
+    } catch (error: Throwable) {
+        logError(error)
+    }
+}
+
+private suspend fun runMeasuredExtractor(
+    extractor: ExtractorApi,
+    url: String,
+    referer: String?,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val started = Clock.System.now().toEpochMilliseconds()
+    var produced = 0
+    val qualities = ArrayList<Int>(4)
+    val names = ArrayList<String>(4)
+    val wrappedCallback: (ExtractorLink) -> Unit = { link ->
+        if (qualities.size < 12) {
+            qualities.add(link.quality)
+            names.add(link.name)
+        }
+        produced++
+        callback(link)
+    }
+    try {
+        extractor.getUrl(url, referer, subtitleCallback, wrappedCallback)
+        dispatchExtractorMeasurement(
+            ExtractorLoadMeasurement(
+                name = extractor.name,
+                producedLinks = produced,
+                failed = produced == 0,
+                timedOut = false,
+                latencyMs = (Clock.System.now().toEpochMilliseconds() - started).coerceAtLeast(0),
+                qualities = qualities,
+                linkNames = names,
+            )
+        )
+    } catch (e: Exception) {
+        logError(e)
+        val timedOut = e.looksLikeTimeout()
+        if (e !is CancellationException || timedOut) {
+            dispatchExtractorMeasurement(
+                ExtractorLoadMeasurement(
+                    name = extractor.name,
+                    producedLinks = produced,
+                    failed = produced == 0,
+                    timedOut = timedOut,
+                    latencyMs = (Clock.System.now().toEpochMilliseconds() - started).coerceAtLeast(0),
+                    qualities = qualities,
+                    linkNames = names,
+                )
+            )
+        }
+        // Rethrow if we have timed out or the caller cancelled.
+        if (e is CancellationException) {
+            throw e
+        }
+    }
+}
+
+/**
  * Tries to load the appropriate extractor based on link, returns true if any extractor is loaded.
  * */
 @Throws(CancellationException::class)
@@ -948,15 +1043,7 @@ suspend fun loadExtractor(
     for (index in extractorApis.lastIndex downTo 0) {
         val extractor = extractorApis[index]
         if (compareUrl.startsWith(extractor.mainUrl.replace(schemaStripRegex, ""))) {
-            try {
-                extractor.getUrl(currentUrl, referer, subtitleCallback, callback)
-            } catch (e: Exception) {
-                logError(e)
-                // Rethrow if we have timed out
-                if (e is CancellationException) {
-                    throw e
-                }
-            }
+            runMeasuredExtractor(extractor, currentUrl, referer, subtitleCallback, callback)
             return true
         }
     }
@@ -969,15 +1056,7 @@ suspend fun loadExtractor(
                 currentUrl
             ) > 80
         ) {
-            try {
-                extractor.getUrl(currentUrl, referer, subtitleCallback, callback)
-            } catch (e: Exception) {
-                logError(e)
-                // Rethrow if we have timed out
-                if (e is CancellationException) {
-                    throw e
-                }
-            }
+            runMeasuredExtractor(extractor, currentUrl, referer, subtitleCallback, callback)
             return true
         }
     }

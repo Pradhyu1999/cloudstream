@@ -467,7 +467,9 @@ class CS3IPlayer : IPlayer {
             this.language,
             this.width,
             this.height,
-            this.sampleMimeType
+            this.sampleMimeType,
+            this.bitrate.takeIf { it > 0 },
+            this.codecs,
         )
     }
 

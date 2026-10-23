@@ -10,6 +10,8 @@ import com.lagradost.cloudstream3.mvvm.Resource
 import com.lagradost.cloudstream3.mvvm.launchSafe
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.ui.home.ServerRatingCalculator
+import com.lagradost.cloudstream3.ui.home.ServerRatings
 import com.lagradost.cloudstream3.ui.player.source_priority.ProfileSettings
 import com.lagradost.cloudstream3.ui.player.source_priority.QualityDataHelper
 import com.lagradost.cloudstream3.ui.player.source_priority.QualityDataHelper.getLinkPriority
@@ -109,9 +111,16 @@ data class VideoState(
         return links.map { link ->
             // negative because we want to sort highest quality first
             link.toDisplayLink(qualityProfile, hideNegativeSources, hideErrorSources)
-        }.sortedBy {
-            // negative because we want to sort highest quality first
-            -it.priority
+        }.sortedWith { first, second ->
+            // Quality profile stays the primary key. Observed server rating only
+            // breaks ties, and a server with no measurements keeps its previous place
+            // among other unmeasured servers.
+            ServerRatingCalculator.compareLinkOrder(
+                priorityA = first.priority,
+                ratingA = ServerRatings.scoreForName(first.link.first?.source),
+                priorityB = second.priority,
+                ratingB = ServerRatings.scoreForName(second.link.first?.source),
+            )
         }.also { value -> sortedLinks[qualityProfile] = value }
     }
 

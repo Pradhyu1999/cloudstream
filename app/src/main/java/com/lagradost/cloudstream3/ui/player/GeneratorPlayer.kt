@@ -48,6 +48,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lagradost.cloudstream3.APIHolder.getApiFromNameNull
 import com.lagradost.cloudstream3.CloudStreamApp
+import com.lagradost.cloudstream3.ui.home.PlaybackRatingTracker
+import com.lagradost.cloudstream3.ui.home.ServerRatingCalculator
+import com.lagradost.cloudstream3.ui.home.ServerRatings
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.LoadResponse
@@ -180,6 +183,9 @@ class GeneratorPlayer : FullScreenPlayer() {
     private lateinit var sync: SyncViewModel
 
     private var currentSelectedLink: Pair<ExtractorLink?, ExtractorUri?>? = null
+    private val playbackRatings = PlaybackRatingTracker {
+        viewModel.state.clearSortedLinksCache()
+    }
     private var currentSelectedSubtitles: SubtitleData? = null
     private val currentMeta: Any? get() = viewModel.state.generatorState?.meta
     private val nextMeta: Any? get() = viewModel.state.generatorState?.nextMeta
@@ -224,6 +230,12 @@ class GeneratorPlayer : FullScreenPlayer() {
 
     override fun onTracksInfoChanged() {
         val tracks = player.getVideoTracks()
+        val video = tracks.currentVideoTrack
+        playbackRatings.onFormat(
+            height = video?.height,
+            bitrateBps = video?.bitrate,
+            codec = video?.codecs ?: video?.sampleMimeType,
+        )
         playerBinding?.playerTracksBtt?.isVisible =
             tracks.allVideoTracks.size > 1 || tracks.allAudioTracks.size > 1
         // Only set the preferred language if it is available.
@@ -239,6 +251,7 @@ class GeneratorPlayer : FullScreenPlayer() {
         if (player.getIsPlaying()) {
             viewModel.forceClearCache = false
         }
+        playbackRatings.onStatus(currentPlayerStatus)
     }
 
     private fun noSubtitles(): Boolean {
@@ -516,6 +529,10 @@ class GeneratorPlayer : FullScreenPlayer() {
         // uiReset() // Removed due to UX
 
         currentSelectedLink = link
+        playbackRatings.begin(
+            source = link.first?.source,
+            provider = viewModel.state.generatorState?.response?.apiName,
+        )
         //  setEpisodes(viewModel.getAllMeta() ?: emptyList())
         setPlayerDimen(null)
         setTitle()
@@ -1137,10 +1154,21 @@ class GeneratorPlayer : FullScreenPlayer() {
                         val sourcesArrayAdapter =
                             ArrayAdapter<String>(ctx, R.layout.sort_bottom_single_choice)
 
+                        val noRatingData = ctx.getString(R.string.server_no_data)
                         sourcesArrayAdapter.addAll(filteredLinks.map { displayLink ->
                             val (link, uri) = displayLink.link
                             val name = link?.name ?: uri?.name ?: "NULL"
-                            "$name ${Qualities.getStringByInt(link?.quality)}"
+                            val quality = Qualities.getStringByInt(link?.quality)
+                            val base = "$name $quality".trim()
+                            if (link == null) {
+                                base
+                            } else {
+                                val suffix = ServerRatingCalculator.linkRatingSuffix(
+                                    ServerRatings.starsForName(link.source),
+                                    noRatingData,
+                                )
+                                "$base · $suffix"
+                            }
                         })
 
                         providerList.choiceMode = AbsListView.CHOICE_MODE_SINGLE
@@ -1563,6 +1591,7 @@ class GeneratorPlayer : FullScreenPlayer() {
     }
 
     override fun playerError(exception: Throwable) {
+        playbackRatings.onError()
         currentSelectedLink?.let { link ->
             viewModel.modifyState { this.addError(link) }
         }
@@ -2043,6 +2072,9 @@ class GeneratorPlayer : FullScreenPlayer() {
 
     override fun playerDimensionsLoaded(width: Int, height: Int) {
         super.playerDimensionsLoaded(width, height)
+        if (width > 0 && height > 0) {
+            playbackRatings.onFormat(height = height, bitrateBps = null, codec = null)
+        }
         setPlayerDimen(width to height)
     }
 

@@ -305,7 +305,24 @@
             app:exitAnim="@anim/exit_anim"
             app:popEnterAnim="@anim/enter_anim"
             app:popExitAnim="@anim/exit_anim" />
+        <action
+            android:id="@+id/action_navigation_home_to_navigation_server_ratings"
+            app:destination="@id/navigation_server_ratings"
+            app:enterAnim="@anim/enter_anim"
+            app:exitAnim="@anim/exit_anim"
+            app:popEnterAnim="@anim/enter_anim"
+            app:popExitAnim="@anim/exit_anim" />
     </fragment>
+
+    <fragment
+        android:id="@+id/navigation_server_ratings"
+        android:name="com.lagradost.cloudstream3.ui.home.ServerRatingsFragment"
+        android:label="@string/server_ratings_title"
+        app:enterAnim="@anim/enter_anim"
+        app:exitAnim="@anim/exit_anim"
+        app:popEnterAnim="@anim/enter_anim"
+        app:popExitAnim="@anim/exit_anim"
+        tools:layout="@layout/fragment_server_ratings" />
 
     <fragment
         android:id="@+id/navigation_search"

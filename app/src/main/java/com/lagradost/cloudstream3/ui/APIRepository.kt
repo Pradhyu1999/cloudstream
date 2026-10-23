@@ -18,11 +18,16 @@ import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.newSearchResponseList
 import com.lagradost.cloudstream3.utils.Coroutines.atomicListOf
+import com.lagradost.cloudstream3.ui.home.LinkLoadOutcome
+import com.lagradost.cloudstream3.ui.home.ServerRatingCalculator
+import com.lagradost.cloudstream3.ui.home.ServerRatings
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.cancellation.CancellationException
 
 class APIRepository(val api: MainAPI) {
     companion object {
@@ -208,13 +213,31 @@ class APIRepository(val api: MainAPI) {
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
         if (isInvalidData(data)) return false // this makes providers cleaner
+        val started = System.currentTimeMillis()
+        var produced = 0
         return try {
-            withTimeout(getTimeout(api.loadLinksTimeoutMs)) {
-                api.loadLinks(data, isCasting, subtitleCallback, callback)
+            val ok = withTimeout(getTimeout(api.loadLinksTimeoutMs)) {
+                api.loadLinks(data, isCasting, subtitleCallback) { link ->
+                    produced++
+                    ServerRatings.onLinkDiscovered(api.name, link.source, link.name, link.quality)
+                    callback(link)
+                }
             }
+            recordProviderLoad(started, if (ok && produced > 0) LinkLoadOutcome.SUCCESS else LinkLoadOutcome.FAILURE)
+            ok
         } catch (throwable: Throwable) {
+            val timedOut = throwable is TimeoutCancellationException || ServerRatingCalculator.looksLikeTimeout(throwable)
+            // Leaving the page cancels the load. That is not a failed server.
+            if (throwable !is CancellationException || timedOut) {
+                recordProviderLoad(started, if (timedOut) LinkLoadOutcome.TIMEOUT else LinkLoadOutcome.FAILURE)
+            }
             logError(throwable)
             return false
         }
+    }
+
+    private fun recordProviderLoad(startedMs: Long, outcome: LinkLoadOutcome) {
+        val latency = (System.currentTimeMillis() - startedMs).coerceAtLeast(0)
+        ServerRatings.onProviderLoad(api.name, outcome, latency)
     }
 }
