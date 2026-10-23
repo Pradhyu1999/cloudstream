@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Activity.RESULT_CANCELED
+import android.app.Dialog
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -841,9 +842,43 @@ object AppContextUtils {
      **/
     fun AlertDialog.setDefaultFocus(buttonFocus: Int = DialogInterface.BUTTON_NEGATIVE) {
         if (!Globals.isLayout(Globals.TV or Globals.EMULATOR)) return
+        prepareForTvRemote()
         this.getButton(buttonFocus).run {
             isFocusableInTouchMode = true
             requestFocus()
+        }
+    }
+
+    /**
+     * Fire OS reports a D-pad remote as touch mode, so the first directional
+     * press is swallowed and focus highlights never appear. Leave touch mode
+     * once the window is attached. Phones stay in touch mode.
+     */
+    fun Activity.prepareForTvRemote() {
+        if (!Globals.isLayout(Globals.TV or Globals.EMULATOR)) return
+        val decor = window?.decorView ?: return
+        decor.post { decor.leaveTouchMode() }
+    }
+
+    /** Same as [Activity.prepareForTvRemote] for a dialog's own window. */
+    fun Dialog.prepareForTvRemote() {
+        if (!Globals.isLayout(Globals.TV or Globals.EMULATOR)) return
+        val decor = window?.decorView ?: return
+        decor.post { decor.leaveTouchMode() }
+    }
+
+    private fun View.leaveTouchMode() {
+        try {
+            val root = View::class.java.getMethod("getViewRootImpl").invoke(this) ?: return
+            val ensure = root.javaClass.getDeclaredMethod(
+                "ensureTouchMode",
+                Boolean::class.javaPrimitiveType
+            )
+            ensure.isAccessible = true
+            ensure.invoke(root, false)
+        } catch (_: Throwable) {
+            // Hidden API may be blocked. Callers still mark real controls
+            // focusableInTouchMode so the remote can land on them.
         }
     }
 

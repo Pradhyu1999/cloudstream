@@ -13,11 +13,15 @@ import android.os.Build
 import android.os.Bundle
 import android.text.Spanned
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -103,6 +107,7 @@ import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment
 import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment.Companion.getAutoSelectLanguageTagIETF
 import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragmentDialog2
 import com.lagradost.cloudstream3.utils.AppContextUtils.getShortSeasonText
+import com.lagradost.cloudstream3.utils.AppContextUtils.prepareForTvRemote
 import com.lagradost.cloudstream3.utils.AppContextUtils.html
 import com.lagradost.cloudstream3.utils.AppContextUtils.sortSubs
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
@@ -651,7 +656,6 @@ class GeneratorPlayer : FullScreenPlayer() {
                 }
             }
 
-        dialog.show()
         binding.cancelBtt.setOnClickListener {
             dialog.dismissSafe()
         }
@@ -851,11 +855,60 @@ class GeneratorPlayer : FullScreenPlayer() {
             }
         }
 
+        // Track the dialog so D-pad / play keys are not treated as player shortcuts
+        // while the subtitle picker is open.
+        selectSubtitlesDialog = dialog
         dialog.setOnDismissListener {
+            if (selectSubtitlesDialog === dialog) selectSubtitlesDialog = null
             dismissCallback.invoke()
         }
 
+        if (isLayout(TV or EMULATOR)) {
+            binding.subtitlesSearch.nextFocusDownId = binding.subtitleAdapter.id
+            binding.yearBtt.nextFocusDownId = binding.subtitleAdapter.id
+            binding.searchFilter.nextFocusDownId = binding.subtitleAdapter.id
+            binding.subtitleAdapter.nextFocusUpId = binding.subtitlesSearch.id
+            binding.subtitleAdapter.nextFocusDownId = binding.applyBtt.id
+            binding.applyBtt.nextFocusUpId = binding.subtitleAdapter.id
+            binding.cancelBtt.nextFocusUpId = binding.subtitleAdapter.id
+            binding.subtitleAdapter.isFocusable = true
+            binding.subtitleAdapter.isFocusableInTouchMode = true
+            binding.subtitlesSearch.findViewById<EditText>(androidx.appcompat.R.id.search_src_text)
+                ?.apply {
+                    // Opening the Fire TV keyboard on focus covers the dialog and
+                    // has crashed the activity. Select opens it; Search submits.
+                    showSoftInputOnFocus = false
+                    imeOptions = EditorInfo.IME_ACTION_SEARCH
+                    setOnEditorActionListener { view, actionId, _ ->
+                        if (
+                            actionId != EditorInfo.IME_ACTION_SEARCH &&
+                            actionId != EditorInfo.IME_ACTION_DONE
+                        ) {
+                            return@setOnEditorActionListener false
+                        }
+                        binding.subtitlesSearch.setQuery(binding.subtitlesSearch.query, true)
+                        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+                        binding.subtitleAdapter.requestFocus()
+                        true
+                    }
+                    setOnKeyListener { view, keyCode, event ->
+                        if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                        if (
+                            keyCode != KeyEvent.KEYCODE_DPAD_CENTER &&
+                            keyCode != KeyEvent.KEYCODE_ENTER
+                        ) {
+                            return@setOnKeyListener false
+                        }
+                        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                        imm?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+                        true
+                    }
+                }
+        }
+
         dialog.show()
+        dialog.prepareForTvRemote()
         binding.subtitlesSearch.setQuery(currentTempMeta.name, true)
         //TODO: Set year text from currently loaded movie on Player
         //dialog.subtitles_search_year?.setText(currentTempMeta.year)

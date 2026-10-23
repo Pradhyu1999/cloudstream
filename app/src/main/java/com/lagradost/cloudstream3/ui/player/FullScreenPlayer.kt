@@ -54,6 +54,7 @@ import com.lagradost.cloudstream3.ui.settings.Globals.PHONE
 import com.lagradost.cloudstream3.ui.settings.Globals.TV
 import com.lagradost.cloudstream3.ui.settings.Globals.isLayout
 import com.lagradost.cloudstream3.utils.AppContextUtils.isUsingMobileData
+import com.lagradost.cloudstream3.utils.AppContextUtils.prepareForTvRemote
 import com.lagradost.cloudstream3.utils.AppContextUtils.shouldShowPlayerMetadata
 import com.lagradost.cloudstream3.utils.BackPressedCallbackHelper.attachBackPressedCallback
 import com.lagradost.cloudstream3.utils.BackPressedCallbackHelper.detachBackPressedCallback
@@ -84,6 +85,9 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
     protected var isLocked = false
     protected var timestampShowState = false
     private var metadataVisibilityToken = 0
+
+    /** Key consumed on ACTION_DOWN. The matching ACTION_UP must be swallowed or PlayerView toggles play again. */
+    private var consumedKeyDown: Int = KeyEvent.KEYCODE_UNKNOWN
     protected var hasEpisodes = false
         private set
 
@@ -424,6 +428,9 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
     }
 
     private fun updateOrientation(ignoreDynamicOrientation: Boolean = false) {
+        // Television devices are fixed landscape. setRequestedOrientation on
+        // Fire OS (no accelerometer) recreates the player or blanks the screen.
+        if (isLayout(TV)) return
         activity?.apply {
             if (lockRotation) {
                 if (isLocked) {
@@ -523,6 +530,20 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         }
         this.selectSubtitlesDialog = dialog
         dialog.show()
+        dialog.prepareForTvRemote()
+        if (isLayout(TV)) {
+            // The offset field pulls up the Fire TV keyboard, which covers the
+            // buttons and has crashed this screen. The remote uses the steppers.
+            binding.subtitleOffsetInput.apply {
+                isFocusable = false
+                isFocusableInTouchMode = false
+                showSoftInputOnFocus = false
+            }
+            binding.subtitleOffsetSubtractMore.apply {
+                isFocusableInTouchMode = true
+                post { requestFocus() }
+            }
+        }
 
         val isPortrait =
             ctx.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
@@ -1156,11 +1177,11 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
     private fun handleKeyDownEvent(keyCode: Int): Boolean? {
         // adb shell input keyevent [INT]
         when (keyCode) {
-            KeyEvent.KEYCODE_FORWARD, KeyEvent.KEYCODE_D, KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+            KeyEvent.KEYCODE_FORWARD, KeyEvent.KEYCODE_D, KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_STEP_FORWARD -> {
                 player.handleEvent(CSPlayerEvent.SeekForward)
             }
 
-            KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD, KeyEvent.KEYCODE_MEDIA_REWIND -> {
+            KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD, KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD -> {
                 player.handleEvent(CSPlayerEvent.SeekBack)
             }
 
@@ -1220,16 +1241,18 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
             }
 
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_P, KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_NUMPAD_ENTER -> { // space is not captured due to navigation
+                if (isDialogOpen()) return null
                 player.handleEvent(CSPlayerEvent.PlayPauseToggle)
             }
 
             // KEYCODE_DPAD_CENTER and KEYCODE_ENTER both act as a "select/confirm" button.
-            // Some remotes (e.g. LG Magic Remote) send KEYCODE_ENTER instead of KEYCODE_DPAD_CENTER.
-            // When the player UI or a dialog is visible, we let the event pass through (return null)
-            // so the focused button/item can handle the click normally, rather than always toggling
-            // play/pause. Only when the UI is hidden do we treat it as a play/pause toggle.
+            // Some remotes (Fire TV, LG Magic Remote) send KEYCODE_ENTER or BUTTON_A
+            // instead of KEYCODE_DPAD_CENTER. When the player UI or a dialog is visible,
+            // let the focused control handle the click. When the UI is hidden, toggle playback.
             KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER -> {
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_BUTTON_SELECT -> {
                 if (isShowing || isDialogOpen()) {
                     return null
                 }
@@ -1300,9 +1323,18 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         }
         val keyCode = event.keyCode
 
+        // PlayerView also toggles on the key release. Handling both press and
+        // release makes the Fire TV play/pause key stutter and keep playing
+        // once the controls have hidden.
+        if (event.action == KeyEvent.ACTION_UP && keyCode == consumedKeyDown) {
+            consumedKeyDown = KeyEvent.KEYCODE_UNKNOWN
+            return true
+        }
+
         if (event.action == KeyEvent.ACTION_DOWN) {
             val value = handleKeyDownEvent(keyCode)
             if (value != null) {
+                if (value) consumedKeyDown = keyCode
                 return value
             }
         }

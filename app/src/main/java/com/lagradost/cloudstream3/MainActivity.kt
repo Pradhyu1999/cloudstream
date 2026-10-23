@@ -133,6 +133,7 @@ import com.lagradost.cloudstream3.utils.AppContextUtils.isLtr
 import com.lagradost.cloudstream3.utils.AppContextUtils.isNetworkAvailable
 import com.lagradost.cloudstream3.utils.AppContextUtils.isRtl
 import com.lagradost.cloudstream3.utils.AppContextUtils.loadCache
+import com.lagradost.cloudstream3.utils.AppContextUtils.prepareForTvRemote
 import com.lagradost.cloudstream3.utils.AppContextUtils.loadRepository
 import com.lagradost.cloudstream3.utils.AppContextUtils.loadResult
 import com.lagradost.cloudstream3.utils.AppContextUtils.loadSearchResult
@@ -202,6 +203,12 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
 
         const val TAG = "MAINACT"
         const val ANIMATED_OUTLINE: Boolean = false
+
+        /**
+         * About 5% of a 1080p television UI. Fire TV Stick 4K composites the
+         * interface at 1080p, and many sets still crop that edge.
+         */
+        const val TV_SAFE_OVERSCAN_DP = 27
         var lastError: String? = null
 
         /** Update lastError variable based on error file, to check if app crashed.
@@ -641,6 +648,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
 
     override fun onResume() {
         super.onResume()
+        prepareForTvRemote()
         afterPluginsLoadedEvent += ::onAllPluginsLoaded
         setActivityInstance(this)
         try {
@@ -1213,6 +1221,9 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
 
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         updateTv()
+        if (isLayout(TV) && !settingsManager.contains(getString(R.string.overscan_key))) {
+            settingsManager.edit { putInt(getString(R.string.overscan_key), TV_SAFE_OVERSCAN_DP) }
+        }
 
         // backup when we update the app, I don't trust myself to not boot lock users, might want to make this a setting?
         safe {

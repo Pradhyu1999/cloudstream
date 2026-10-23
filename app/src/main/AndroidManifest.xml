@@ -63,12 +63,45 @@
         <package android:name="com.biglybt.android.client" />
     </queries>
 
-    <!-- Fixes android tv fuckery -->
+    <!-- Phone hardware must stay optional so a D-pad Fire TV Stick can install the app.
+         required=false does not change behaviour on phones. -->
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
     <uses-feature
+        android:name="android.hardware.faketouch"
+        android:required="false" />
+    <uses-feature
         android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.front"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor"
+        android:required="false" />
+    <!-- Landscape-only TVs do not have a portrait screen. -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+    <!-- Ethernet-only Fire TV devices do not advertise wifi. -->
+    <uses-feature
+        android:name="android.hardware.wifi"
         android:required="false" />
 
     <!-- Without the large heap Exoplayer buffering gets reset due to OOM. -->
@@ -162,7 +195,7 @@
 
         <activity
             android:name=".ui.account.AccountSelectActivity2"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
             android:exported="true">
             <intent-filter android:exported="true">
                 <action android:name="android.intent.action.MAIN" />
